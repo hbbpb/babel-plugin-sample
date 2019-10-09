@@ -5,7 +5,9 @@
   "plugins": [
     [
       "./plugins",
-      {}
+      {
+        "libraryName": "lib"
+      }
     ]
   ]
 }
