@@ -1,3 +1,10 @@
-let asyncModule2 = () => "I am a async Module2"
+const init = async () => {
+    const {default: asyncModule} = await import('./lib')
+    return {
+        test: () => asyncModule() + '2'
+    }
+}
 
-export default asyncModule2
+const asyncModule2 = init()
+
+export {asyncModule2}

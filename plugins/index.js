@@ -9,7 +9,7 @@ module.exports = (_, options) => {
             ImportDeclaration(path, _ref = {opts: {}}) {
                 const sourceValue = path.node.source.value || '';
                 if (sourceValue.indexOf(libraryName) >= 0) {
-                    path.remove();
+                    // path.remove();
                     //todo
                 }
             }
