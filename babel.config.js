@@ -6,7 +6,8 @@ module.exports = {
     [
       './plugins',
       {
-        libraryName: 'lib'
+        libraryName: './lib',
+        exclude: ['utils']
       }
     ]
   ]

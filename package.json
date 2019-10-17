@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "test",
-    "build": "babel src -d dist",
+    "build": "babel fake/index.js -d dist",
     "debug-build": "node $NODE_DEBUG_OPTION ./node_modules/@babel/cli/bin/babel.js src -d dist"
   },
   "keywords": [
@@ -19,7 +19,8 @@
     "@babel/plugin-syntax-dynamic-import": "^7.2.0",
     "@babel/plugin-transform-runtime": "^7.6.2",
     "@babel/preset-env": "^7.6.2",
-    "babel-types": "^6.26.0"
+    "@babel/template": "^7.6.0",
+    "@babel/types": "^7.6.3"
   },
   "dependencies": {
     "@babel/runtime": "^7.6.3"
