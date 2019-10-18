@@ -61,7 +61,7 @@ module.exports = (_, option = {}) => {
         }
 
         const bundle = importPath.slice(libraryName.length + 1).split('/')[0];
-        const isBundleInvalid = exclude.includes(bundle);
+        const isBundleInvalid = !bundle || exclude.includes(bundle);
         if (isBundleInvalid) {
           return;
         }
