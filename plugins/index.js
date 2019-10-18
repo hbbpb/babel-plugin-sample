@@ -8,12 +8,42 @@ const template = require('@babel/template').default;
  *       3、处理loadComponent方法的位置
  */
 
+const hasVueUse = (binding) => {
+  let has = false;
+  if (!binding) {
+    return has;
+  }
+  const { referencePaths } = binding;
+  if (!referencePaths || !referencePaths.length) {
+    return has;
+  }
+  referencePaths.forEach((refPath) => {
+    const { parent } = refPath;
+    if (t.isCallExpression(parent)) {
+      const { callee } = parent;
+      if (t.isMemberExpression(callee)) {
+        const {
+          object: { name: objName },
+          property: { name: propName }
+        } = callee;
+        if (objName === 'Vue' && propName === 'use') {
+          has = true;
+        }
+      }
+    }
+  });
+  return has;
+};
+
 module.exports = (_, option = {}) => {
   const { libraryName = '', exclude = [] } = option;
   return {
     visitor: {
       ImportDeclaration(path, state = { opts: {} }) {
-        const { node } = path;
+        const {
+          node,
+          scope: { bindings }
+        } = path;
         const { source, specifiers } = node;
 
         const isImportDefault =
@@ -36,9 +66,14 @@ module.exports = (_, option = {}) => {
         if (isBundleInvalid) {
           return;
         }
+
         const {
           local: { name: identifierName }
         } = specifiers[0];
+        if (hasVueUse(bindings[identifierName])) {
+          return;
+        }
+
         const buildFunc = template(`
           const %%varName%% = () => loadComponent(%%bundle%%)
         `);
