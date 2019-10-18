@@ -4,8 +4,7 @@ const template = require('@babel/template').default;
 /**
  * todo: 1、区别处理import A, import { A, B }, import A, { B }状态
  *          (目前想法是，只处理import A这种情况，其他直接跳过)
- *       2、判断被引用的位置，区别处理import
- *       3、处理loadComponent方法的位置
+ *       2、处理loadComponent方法的位置。目前考虑挂到window上
  */
 
 const hasVueUse = (binding) => {
