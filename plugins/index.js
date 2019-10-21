@@ -7,14 +7,14 @@ const template = require('@babel/template').default;
  *       2、处理loadComponent方法的位置。目前考虑挂到window上
  */
 
-const hasVueUse = (binding) => {
-  let has = false;
+const isUsedByVueUse = (binding) => {
+  let isUsed = false;
   if (!binding) {
-    return has;
+    return isUsed;
   }
   const { referencePaths } = binding;
   if (!referencePaths || !referencePaths.length) {
-    return has;
+    return isUsed;
   }
   referencePaths.forEach((refPath) => {
     const { parent } = refPath;
@@ -26,12 +26,12 @@ const hasVueUse = (binding) => {
           property: { name: propName }
         } = callee;
         if (objName === 'Vue' && propName === 'use') {
-          has = true;
+          isUsed = true;
         }
       }
     }
   });
-  return has;
+  return isUsed;
 };
 
 module.exports = (_, option = {}) => {
@@ -44,14 +44,6 @@ module.exports = (_, option = {}) => {
           scope: { bindings }
         } = path;
         const { source, specifiers } = node;
-
-        const isImportDefault =
-          specifiers &&
-          specifiers.length === 1 &&
-          t.isImportDefaultSpecifier(specifiers[0]);
-        if (!isImportDefault) {
-          return;
-        }
 
         const { value: importPath = '' } = source;
         const isPathProcessable =
@@ -66,21 +58,55 @@ module.exports = (_, option = {}) => {
           return;
         }
 
-        const {
-          local: { name: identifierName }
-        } = specifiers[0];
-        if (hasVueUse(bindings[identifierName])) {
+        if (!specifiers || !specifiers.length) {
           return;
         }
 
-        const buildFunc = template(`
-          const %%varName%% = () => loadComponent(%%bundle%%)
-        `);
-        const ast = buildFunc({
-          varName: t.identifier(identifierName),
-          bundle: t.stringLiteral(bundle)
+        const arrayAsts = [];
+        let hasVueUsedIdentifier = false;
+        specifiers.forEach((specifier) => {
+          const {
+            local: { name: identifierName }
+          } = specifier;
+          const isUsedByVue = isUsedByVueUse(bindings[identifierName]);
+          const isImportDefaultSpecifier = t.isImportDefaultSpecifier(
+            specifier
+          );
+          console.log(`${identifierName}: ${isUsedByVue}`);
+          if (isUsedByVue) {
+            hasVueUsedIdentifier = true;
+            const retainTemplate = isImportDefaultSpecifier
+              ? `import %%identifierName%% from %%path%%;`
+              : `import { %%identifierName%% } from %%path%%;`;
+            const retainFunc = template(retainTemplate);
+            arrayAsts.push(
+              retainFunc({
+                identifierName: t.identifier(identifierName),
+                path: t.stringLiteral(importPath)
+              })
+            );
+          } else {
+            const replaceTemplate = isImportDefaultSpecifier
+              ? `const %%identifierName%% = () => loadComponent(%%bundle%%);`
+              : `const %%identifierName%% = () => loadComponent(%%bundle%%, %%identifierName%%);`;
+            const replaceFunc = template(replaceTemplate);
+            arrayAsts.push(
+              replaceFunc({
+                identifierName: t.identifier(identifierName),
+                bundle: t.stringLiteral(bundle)
+              })
+            );
+          }
         });
-        path.replaceWith(ast);
+
+        if (
+          !arrayAsts.length ||
+          (hasVueUsedIdentifier && specifiers.length === 1)
+        ) {
+          return;
+        }
+
+        path.replaceWithMultiple(arrayAsts);
       }
     }
   };
