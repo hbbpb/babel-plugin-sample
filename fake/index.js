@@ -6,7 +6,7 @@ import './lib/no';
 
 Vue.use(TextComp);
 const test = {
-  TextComp
+  C
 };
 test111(TextComp);
 

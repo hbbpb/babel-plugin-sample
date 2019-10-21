@@ -45,6 +45,7 @@ module.exports = (_, option = {}) => {
         } = path;
         const { source, specifiers } = node;
 
+        // 判断并跳过引用源非libraryName的import引用
         const { value: importPath = '' } = source;
         const isPathProcessable =
           importPath && ~importPath.indexOf(libraryName);
@@ -52,18 +53,20 @@ module.exports = (_, option = {}) => {
           return;
         }
 
+        // 引用路径libraryName/bundle，跳过bundle不存在或在exclude列表中的引用
         const bundle = importPath.slice(libraryName.length + 1).split('/')[0];
         const isBundleInvalid = !bundle || exclude.includes(bundle);
         if (isBundleInvalid) {
           return;
         }
 
+        // 跳过import ('test')的情况
         if (!specifiers || !specifiers.length) {
           return;
         }
 
         const arrayAsts = [];
-        let hasVueUsedIdentifier = false;
+        let hasVueUsedIdentifier = false; // 判断所有specifier中的identifier是否有被Vue.use用到
         specifiers.forEach((specifier) => {
           const {
             local: { name: identifierName }
@@ -72,8 +75,8 @@ module.exports = (_, option = {}) => {
           const isImportDefaultSpecifier = t.isImportDefaultSpecifier(
             specifier
           );
-          console.log(`${identifierName}: ${isUsedByVue}`);
           if (isUsedByVue) {
+            // 被Vue.use用到的保持不变
             hasVueUsedIdentifier = true;
             const retainTemplate = isImportDefaultSpecifier
               ? `import %%identifierName%% from %%path%%;`
@@ -86,6 +89,7 @@ module.exports = (_, option = {}) => {
               })
             );
           } else {
+            // 未被用到，替换为工具方法获取
             const replaceTemplate = isImportDefaultSpecifier
               ? `const %%identifierName%% = () => loadComponent(%%bundle%%);`
               : `const %%identifierName%% = () => loadComponent(%%bundle%%, %%identifierName%%);`;
@@ -99,6 +103,11 @@ module.exports = (_, option = {}) => {
           }
         });
 
+        /**
+         * 如果没有需要被替换的ast 或 有且仅有一个且被Vue.use用到，则跳过处理。
+         * 有且仅有一个且被Vue.use使用时，如果不跳过处理会死循环。
+         * 暂时没有找到只删除path中的node/identifier的API，只能对path进行处理，
+         */
         if (
           !arrayAsts.length ||
           (hasVueUsedIdentifier && specifiers.length === 1)
